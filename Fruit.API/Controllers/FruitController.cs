@@ -4,9 +4,17 @@ namespace Fruit.API.Controllers
 {
     public class FruitController : ControllerBase
     {
+        private readonly ILogger _logger;
+
+        public FruitController(ILogger<FruitController> logger)
+        {
+            _logger = logger;
+        }
+
         [HttpGet("api/Fruits")]
         public IEnumerable<FruitDTO> GetFruits()
         {
+            _logger.LogInformation("We Made It!");
             return new List<FruitDTO>
             {
                 new FruitDTO{ FruitID = 1, Name = "Kiwi", Calories = 345 },
