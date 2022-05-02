@@ -1,5 +1,7 @@
+using FruitUI.API.ServiceCore;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.OpenApi.Models;
 using Serilog;
 
 namespace FruitUI.API
@@ -15,7 +17,10 @@ namespace FruitUI.API
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddControllers();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(x => ConfigureSwagger(x));
+
+            builder.Services.AddTransient<IAuthService>(x => new AuthService());
+
             return ConfigureLogging(builder);
         }
 
@@ -48,14 +53,46 @@ namespace FruitUI.API
 
             if (app.Environment.IsDevelopment())
             {
+                app.UseMiddleware<SwaggerMW>();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
             app.UseHttpsRedirection();
+            app.UseMiddleware<JwtMW>();
 
             app.MapControllers();
             return app;
+        }
+
+        private static void ConfigureSwagger(Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions options)
+        {
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                In = ParameterLocation.Header,
+                Description = "Please enter a valid token",
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                BearerFormat = "JWT",
+                Scheme = "Bearer"
+            });
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
+
+            var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
         }
     }
 }
